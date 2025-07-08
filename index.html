@@ -1,97 +1,95 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Basit Optik Okuyucu</title>
-    <style>
-        body { font-family: Arial; text-align: center; }
-        select, button { padding: 10px; margin: 10px; }
-        .results { margin-top: 20px; font-size: 18px; }
-        video { width: 320px; height: 240px; border: 1px solid #ccc; }
-    </style>
+  <title>Gerçek Optik Okuyucu</title>
+  <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onOpenCvReady();"></script>
+  <style>
+    body { font-family: Arial; text-align: center; }
+    video, canvas { border: 1px solid #ccc; margin: 10px; }
+    #results { font-size: 18px; margin-top: 20px; }
+  </style>
 </head>
 <body>
-    <h1>Basit Optik Okuyucu</h1>
+  <h1>Gerçek Optik Okuyucu</h1>
+  <video id="video" width="640" height="480" autoplay></video><br>
+  <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+  <button onclick="analyzeFrame()">📷 Okut</button>
+  <div id="results">Sonuç burada görünecek...</div>
 
-    <p>📘 Kitap Seç:</p>
-    <select id="kitapSelect"></select>
+  <script>
+    const answerKey = ["B", "C", "A", "D", "E", "C", "A", "B", "D", "E"];
+    const shiklar = [];
+    const baseX = 100, baseY = 50, stepY = 35, stepX = 30;
 
-    <p>📄 Deneme Seç:</p>
-    <select id="denemeSelect"></select>
+    for (let i = 0; i < 10; i++) {
+      for (let j = 0; j < 5; j++) {
+        shiklar.push({
+          soru: i,
+          secenek: String.fromCharCode(65 + j),
+          x: baseX + j * stepX,
+          y: baseY + i * stepY,
+          w: 20,
+          h: 20
+        });
+      }
+    }
 
-    <p>🎥 Kamerayı aç:</p>
-    <video id="video" autoplay></video><br>
+    let video = document.getElementById("video");
+    let canvas = document.getElementById("canvas");
+    let ctx = canvas.getContext("2d");
 
-    <button onclick="fakeScan()">📷 Okut (Demo)</button>
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => alert("Kamera açılamadı: " + err));
 
-    <div class="results" id="results"></div>
+    function onOpenCvReady() {
+      console.log("OpenCV yüklendi");
+    }
 
-    <script>
-        let answerKey = {};
+    function analyzeFrame() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let src = cv.imread(canvas);
+      let gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      let threshold = new cv.Mat();
+      cv.threshold(gray, threshold, 127, 255, cv.THRESH_BINARY_INV);
 
-        // Kamera aç
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                document.getElementById('video').srcObject = stream;
-            })
-            .catch(err => {
-                alert("Kamera açılamadı: " + err);
-            });
-
-        // JSON dosyasını yükle
-        fetch("cevap_anahtari.json")
-            .then(res => res.json())
-            .then(data => {
-                answerKey = data;
-                const kitapSelect = document.getElementById("kitapSelect");
-                for (let kitap in data) {
-                    let opt = document.createElement("option");
-                    opt.value = kitap;
-                    opt.textContent = kitap;
-                    kitapSelect.appendChild(opt);
-                }
-                kitapSelect.onchange = () => {
-                    const denemeSelect = document.getElementById("denemeSelect");
-                    denemeSelect.innerHTML = "";
-                    for (let deneme in answerKey[kitapSelect.value]) {
-                        let opt = document.createElement("option");
-                        opt.value = deneme;
-                        opt.textContent = deneme;
-                        denemeSelect.appendChild(opt);
-                    }
-                };
-                kitapSelect.onchange(); // Varsayılan denemeleri yükle
-            });
-
-        // Demo okuma fonksiyonu (manuel simülasyon)
-        function fakeScan() {
-            const seciliKitap = document.getElementById("kitapSelect").value;
-            const seciliDeneme = document.getElementById("denemeSelect").value;
-            const dogruCevaplar = answerKey[seciliKitap][seciliDeneme];
-
-            // Simüle edilen kullanıcı cevapları (manuel değiştirilebilir)
-            const kullaniciCevaplar = ["B", "C", "A", "D", "A", "C", "A", "B", "D", "E"];
-
-            let dogru = 0, yanlis = 0, bos = 0;
-            for (let i = 0; i < dogruCevaplar.length; i++) {
-                const k = kullaniciCevaplar[i];
-                const d = dogruCevaplar[i];
-                if (!k) {
-                    bos++;
-                } else if (k === d) {
-                    dogru++;
-                } else {
-                    yanlis++;
-                }
-            }
-            const net = dogru - yanlis / 4;
-            document.getElementById("results").innerHTML = `
-                ✅ Doğru: ${dogru}<br>
-                ❌ Yanlış: ${yanlis}<br>
-                ⭕ Boş: ${bos}<br>
-                📊 Net: ${net.toFixed(2)}
-            `;
+      const kullaniciCevaplar = [];
+      for (let i = 0; i < 10; i++) {
+        let maxFill = 0;
+        let secenek = "";
+        for (let j = 0; j < 5; j++) {
+          let s = shiklar[i * 5 + j];
+          let roi = threshold.roi(new cv.Rect(s.x, s.y, s.w, s.h));
+          let nonZero = cv.countNonZero(roi);
+          if (nonZero > maxFill && nonZero > 30) {
+            maxFill = nonZero;
+            secenek = s.secenek;
+          }
+          roi.delete();
         }
-    </script>
+        kullaniciCevaplar.push(secenek);
+      }
+
+      let dogru = 0, yanlis = 0, bos = 0;
+      for (let i = 0; i < answerKey.length; i++) {
+        let k = kullaniciCevaplar[i];
+        let d = answerKey[i];
+        if (!k) bos++;
+        else if (k === d) dogru++;
+        else yanlis++;
+      }
+      let net = dogru - yanlis / 4;
+      document.getElementById("results").innerHTML = `
+        ✅ Doğru: ${dogru}<br>
+        ❌ Yanlış: ${yanlis}<br>
+        ⭕ Boş: ${bos}<br>
+        📊 Net: ${net.toFixed(2)}<br>
+        🔎 Cevaplar: ${kullaniciCevaplar.join(" ")}
+      `;
+
+      src.delete(); gray.delete(); threshold.delete();
+    }
+  </script>
 </body>
 </html>

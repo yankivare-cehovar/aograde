@@ -839,104 +839,125 @@
                     const optX = x + (opt * bubbleWidth * 1.2);
                     const darkness = calculateBubbleDarkness(binaryData, canvas.width, canvas.height, 
                                                            optX, y, bubbleWidth, bubbleHeight);
-
-                    if (darkness > maxDarkness && darkness > 0.5) { // 0.5 = 50% dark pixels
+                    
+                    // If darkness exceeds threshold and is the darkest so far
+                    if (darkness > 0.7 && darkness > maxDarkness) {
                         maxDarkness = darkness;
                         detectedAnswer = options[opt];
                     }
                 }
-
-                if (!detectedAnswer) {
-                    studentAnswers.push('');
-                } else {
-                    studentAnswers.push(detectedAnswer);
-                }
+                
+                studentAnswers.push(detectedAnswer || '');
             }
-
-            // Show debug info
+            
+            // Debug info
+            debugInfo.textContent = `Detected ${studentAnswers.filter(a => a).length} answers out of ${numQuestions}`;
             debugInfo.style.display = 'block';
-            debugInfo.textContent = `Scanned ${numQuestions} questions. Detected answers: ${studentAnswers.join(', ')}`;
-
+            
             return studentAnswers;
         }
 
-        // Helper: Calculate how dark a bubble region is (ratio of black pixels)
         function calculateBubbleDarkness(binaryData, width, height, x, y, w, h) {
-            let dark = 0, total = 0;
-            for (let dy = 0; dy < h; dy++) {
-                for (let dx = 0; dx < w; dx++) {
-                    const px = Math.floor(x + dx);
-                    const py = Math.floor(y + dy);
-                    if (px < 0 || px >= width || py < 0 || py >= height) continue;
-                    const idx = py * width + px;
-                    if (binaryData[idx] === 0) dark++;
-                    total++;
+            let darkPixels = 0;
+            let totalPixels = 0;
+            
+            for (let dy = y; dy < y + h; dy++) {
+                for (let dx = x; dx < x + w; dx++) {
+                    if (dx >= 0 && dx < width && dy >= 0 && dy < height) {
+                        const index = dy * width + dx;
+                        if (binaryData[index] === 0) darkPixels++;
+                        totalPixels++;
+                    }
                 }
             }
-            return total ? dark / total : 0;
+            
+            return totalPixels > 0 ? darkPixels / totalPixels : 0;
         }
 
-        // Dummy: Find bubble regions (not used, but placeholder for future improvements)
         function findBubbleRegions(binaryData, width, height) {
-            // For now, we use fixed positions in scanOMRSheet
+            // This is a simplified version - in a real app you'd want to:
+            // 1. Detect the form corners using edge detection
+            // 2. Apply perspective correction
+            // 3. Use known bubble positions relative to form markers
+            
+            // For demo purposes, we'll return some hardcoded regions
             return [];
         }
 
         function displayResults(studentAnswers) {
-            if (!currentAnswers) return;
-
+            if (!currentAnswers || studentAnswers.length !== currentAnswers.length) {
+                showError('Error processing answer sheet. Please try again.');
+                return;
+            }
+            
             const answersGrid = document.getElementById('answers-grid');
             answersGrid.innerHTML = '';
-
-            let correct = 0, incorrect = 0, blank = 0;
-
+            
+            let correctCount = 0;
+            let incorrectCount = 0;
+            let blankCount = 0;
+            
             for (let i = 0; i < currentAnswers.length; i++) {
-                const answer = studentAnswers[i] || '';
                 const correctAnswer = currentAnswers[i];
-                let status = 'blank';
-                if (answer === '') {
-                    blank++;
-                } else if (answer === correctAnswer) {
-                    correct++;
-                    status = 'correct';
+                const studentAnswer = studentAnswers[i] || '';
+                
+                const answerItem = document.createElement('div');
+                answerItem.className = 'answer-item';
+                
+                if (studentAnswer === '') {
+                    answerItem.classList.add('blank');
+                    blankCount++;
+                } else if (studentAnswer === correctAnswer) {
+                    answerItem.classList.add('correct');
+                    correctCount++;
                 } else {
-                    incorrect++;
-                    status = 'incorrect';
+                    answerItem.classList.add('incorrect');
+                    incorrectCount++;
                 }
-
-                const item = document.createElement('div');
-                item.className = `answer-item ${status}`;
-                item.innerHTML = `
-                    <div class="answer-number">${i + 1}</div>
-                    <div class="answer-choice">${answer || '-'}</div>
-                `;
-                answersGrid.appendChild(item);
+                
+                const answerNumber = document.createElement('div');
+                answerNumber.className = 'answer-number';
+                answerNumber.textContent = `Q${i + 1}`;
+                
+                const answerChoice = document.createElement('div');
+                answerChoice.className = 'answer-choice';
+                answerChoice.textContent = studentAnswer || '-';
+                
+                answerItem.appendChild(answerNumber);
+                answerItem.appendChild(answerChoice);
+                answersGrid.appendChild(answerItem);
             }
-
-            // Update summary and grade
-            document.getElementById('correct-count').textContent = correct;
-            document.getElementById('incorrect-count').textContent = incorrect;
-            document.getElementById('blank-count').textContent = blank;
+            
+            // Update summary
+            document.getElementById('correct-count').textContent = correctCount;
+            document.getElementById('incorrect-count').textContent = incorrectCount;
+            document.getElementById('blank-count').textContent = blankCount;
             document.getElementById('total-count').textContent = currentAnswers.length;
-
-            const percent = Math.round((correct / currentAnswers.length) * 100);
-            document.getElementById('grade-score').textContent = `${percent}%`;
-            document.getElementById('grade-info').textContent = `${correct} out of ${currentAnswers.length} correct`;
-
+            
+            // Update grade display
+            const percentage = Math.round((correctCount / currentAnswers.length) * 100);
+            document.getElementById('grade-score').textContent = `${percentage}%`;
+            document.getElementById('grade-info').textContent = 
+                `${correctCount} out of ${currentAnswers.length} correct`;
+            
+            // Show results
             resultsSection.classList.add('show');
+            previewSection.classList.remove('show');
         }
 
-        function showError(msg) {
-            let errorDiv = document.querySelector('.error-message');
-            if (!errorDiv) {
-                errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message';
-                document.querySelector('.main-content').insertBefore(errorDiv, document.querySelector('.main-content').firstChild);
-            }
-            errorDiv.textContent = msg;
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            // Insert at the top of main content
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(errorDiv, mainContent.firstChild);
+            
+            // Remove after 5 seconds
             setTimeout(() => {
-                if (errorDiv) errorDiv.remove();
-            }, 4000);
+                errorDiv.remove();
+            }, 5000);
         }
     </script>
 </body>

@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Basit Optik Okuyucu</title>
+    <style>
+        body { font-family: Arial; text-align: center; }
+        select, button { padding: 10px; margin: 10px; }
+        .results { margin-top: 20px; font-size: 18px; }
+        video { width: 320px; height: 240px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Basit Optik Okuyucu</h1>
+
+    <p>📘 Kitap Seç:</p>
+    <select id="kitapSelect"></select>
+
+    <p>📄 Deneme Seç:</p>
+    <select id="denemeSelect"></select>
+
+    <p>🎥 Kamerayı aç:</p>
+    <video id="video" autoplay></video><br>
+
+    <button onclick="fakeScan()">📷 Okut (Demo)</button>
+
+    <div class="results" id="results"></div>
+
+    <script>
+        let answerKey = {};
+
+        // Kamera aç
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                document.getElementById('video').srcObject = stream;
+            })
+            .catch(err => {
+                alert("Kamera açılamadı: " + err);
+            });
+
+        // JSON dosyasını yükle
+        fetch("cevap_anahtari.json")
+            .then(res => res.json())
+            .then(data => {
+                answerKey = data;
+                const kitapSelect = document.getElementById("kitapSelect");
+                for (let kitap in data) {
+                    let opt = document.createElement("option");
+                    opt.value = kitap;
+                    opt.textContent = kitap;
+                    kitapSelect.appendChild(opt);
+                }
+                kitapSelect.onchange = () => {
+                    const denemeSelect = document.getElementById("denemeSelect");
+                    denemeSelect.innerHTML = "";
+                    for (let deneme in answerKey[kitapSelect.value]) {
+                        let opt = document.createElement("option");
+                        opt.value = deneme;
+                        opt.textContent = deneme;
+                        denemeSelect.appendChild(opt);
+                    }
+                };
+                kitapSelect.onchange(); // Varsayılan denemeleri yükle
+            });
+
+        // Demo okuma fonksiyonu (manuel simülasyon)
+        function fakeScan() {
+            const seciliKitap = document.getElementById("kitapSelect").value;
+            const seciliDeneme = document.getElementById("denemeSelect").value;
+            const dogruCevaplar = answerKey[seciliKitap][seciliDeneme];
+
+            // Simüle edilen kullanıcı cevapları (manuel değiştirilebilir)
+            const kullaniciCevaplar = ["B", "C", "A", "D", "A", "C", "A", "B", "D", "E"];
+
+            let dogru = 0, yanlis = 0, bos = 0;
+            for (let i = 0; i < dogruCevaplar.length; i++) {
+                const k = kullaniciCevaplar[i];
+                const d = dogruCevaplar[i];
+                if (!k) {
+                    bos++;
+                } else if (k === d) {
+                    dogru++;
+                } else {
+                    yanlis++;
+                }
+            }
+            const net = dogru - yanlis / 4;
+            document.getElementById("results").innerHTML = `
+                ✅ Doğru: ${dogru}<br>
+                ❌ Yanlış: ${yanlis}<br>
+                ⭕ Boş: ${bos}<br>
+                📊 Net: ${net.toFixed(2)}
+            `;
+        }
+    </script>
+</body>
+</html>

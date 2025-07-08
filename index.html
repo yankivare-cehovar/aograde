@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZipGrade Scanner - Personal Edition</title>
+    <title>ZipGrade Scanner - Optical Mark Recognition</title>
     <style>
         * {
             margin: 0;
@@ -108,66 +108,202 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
-        .scan-section {
+        .camera-section {
             background: #f8fafc;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            border: 2px dashed #cbd5e1;
+            border: 2px solid #e5e7eb;
             text-align: center;
-            transition: all 0.3s ease;
         }
 
-        .scan-section.active {
+        .camera-section.active {
             border-color: #4f46e5;
             background: rgba(79, 70, 229, 0.05);
         }
 
-        .file-input {
-            display: none;
+        .camera-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
         }
 
-        .file-label {
-            display: inline-block;
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        #camera-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .scan-frame {
+            width: 80%;
+            height: 80%;
+            border: 3px solid #4f46e5;
+            border-radius: 10px;
+            position: relative;
+            background: rgba(79, 70, 229, 0.1);
+        }
+
+        .scan-frame::before {
+            content: 'Align answer sheet within this frame';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
             color: white;
-            border-radius: 50px;
-            cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+            font-size: 0.9rem;
+            background: rgba(79, 70, 229, 0.8);
+            padding: 5px 15px;
+            border-radius: 20px;
+            white-space: nowrap;
         }
 
-        .file-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
         }
 
-        .scan-button {
-            display: inline-block;
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            color: white;
+        .camera-btn {
+            padding: 12px 24px;
             border: none;
             border-radius: 50px;
-            cursor: pointer;
             font-weight: 600;
             font-size: 1rem;
-            margin-left: 15px;
+            cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .scan-button:hover {
+        .camera-btn.start {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .camera-btn.capture {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+        }
+
+        .camera-btn.stop {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+        }
+
+        .camera-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
-        .scan-button:disabled {
+        .camera-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .preview-section {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .preview-section.show {
+            display: block;
+        }
+
+        #captured-image {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .processing-section {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .processing-section.show {
+            display: block;
+        }
+
+        .processing-steps {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: rgba(79, 70, 229, 0.1);
+            border-color: #4f46e5;
+            color: #4f46e5;
+        }
+
+        .step.completed {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
+            color: #10b981;
+        }
+
+        .step-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .step.active .step-icon {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .step.completed .step-icon {
+            background: #10b981;
+            color: white;
         }
 
         .results-section {
@@ -217,13 +353,14 @@
 
         .answers-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             gap: 10px;
             margin-bottom: 30px;
         }
 
         .answer-item {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 15px;
@@ -246,22 +383,20 @@
             border: 2px solid #ef4444;
         }
 
-        .answer-item::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: all 0.3s ease;
+        .answer-item.blank {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            color: #6b7280;
+            border: 2px solid #d1d5db;
         }
 
-        .answer-item:hover::before {
-            width: 100%;
-            height: 100%;
+        .answer-number {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .answer-choice {
+            font-size: 1.2rem;
+            font-weight: 700;
         }
 
         .summary {
@@ -291,6 +426,10 @@
             color: #dc2626;
         }
 
+        .summary-value.blank {
+            color: #6b7280;
+        }
+
         .summary-value.total {
             color: #4f46e5;
         }
@@ -301,31 +440,6 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            border: 4px solid #f3f4f6;
-            border-top: 4px solid #4f46e5;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .answer-key {
@@ -359,6 +473,16 @@
             border: 2px solid #c7d2fe;
         }
 
+        .error-message {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: #991b1b;
+            text-align: center;
+        }
+
         @media (max-width: 768px) {
             .control-panel {
                 flex-direction: column;
@@ -369,12 +493,22 @@
             }
             
             .answers-grid {
-                grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
                 gap: 8px;
             }
             
             .main-content {
                 padding: 20px;
+            }
+
+            .processing-steps {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .camera-controls {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
@@ -383,7 +517,7 @@
     <div class="container">
         <div class="header">
             <h1>ZipGrade Scanner</h1>
-            <p>Personal Edition - Optical Mark Recognition</p>
+            <p>Optical Mark Recognition - Camera Edition</p>
         </div>
 
         <div class="main-content">
@@ -406,17 +540,55 @@
                 </div>
             </div>
 
-            <div class="scan-section" id="scan-section">
-                <h3 style="margin-bottom: 20px; color: #374151;">Upload Answer Sheet</h3>
-                <input type="file" id="file-input" class="file-input" accept="image/*">
-                <label for="file-input" class="file-label">Choose Image File</label>
-                <button class="scan-button" id="scan-button" disabled>Scan & Grade</button>
-                <p style="margin-top: 15px; color: #6b7280;">Upload a photo of the completed answer sheet</p>
+            <div class="camera-section" id="camera-section">
+                <h3 style="margin-bottom: 20px; color: #374151;">Camera Scanner</h3>
+                <div class="camera-container">
+                    <video id="camera-feed" autoplay muted></video>
+                    <div class="camera-overlay">
+                        <div class="scan-frame"></div>
+                    </div>
+                </div>
+                <div class="camera-controls">
+                    <button class="camera-btn start" id="start-camera">Start Camera</button>
+                    <button class="camera-btn capture" id="capture-btn" disabled>Capture Answer Sheet</button>
+                    <button class="camera-btn stop" id="stop-camera" disabled>Stop Camera</button>
+                </div>
             </div>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Scanning answer sheet...</p>
+            <div class="preview-section" id="preview-section">
+                <h3 style="margin-bottom: 20px; color: #374151;">Captured Image</h3>
+                <div style="text-align: center;">
+                    <img id="captured-image" alt="Captured answer sheet">
+                    <div style="margin-top: 20px;">
+                        <button class="camera-btn start" id="process-btn">Process Answer Sheet</button>
+                        <button class="camera-btn stop" id="retake-btn">Retake Photo</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="processing-section" id="processing-section">
+                <h3 style="margin-bottom: 20px; color: #374151;">Processing Answer Sheet</h3>
+                <div class="processing-steps">
+                    <div class="step" id="step-1">
+                        <div class="step-icon">1</div>
+                        <span>Image Analysis</span>
+                    </div>
+                    <div class="step" id="step-2">
+                        <div class="step-icon">2</div>
+                        <span>Bubble Detection</span>
+                    </div>
+                    <div class="step" id="step-3">
+                        <div class="step-icon">3</div>
+                        <span>Answer Recognition</span>
+                    </div>
+                    <div class="step" id="step-4">
+                        <div class="step-icon">4</div>
+                        <span>Grading</span>
+                    </div>
+                </div>
+                <div id="processing-message">
+                    <p>Analyzing captured image...</p>
+                </div>
             </div>
 
             <div class="results-section" id="results-section">
@@ -437,6 +609,10 @@
                     <div class="summary-item">
                         <div class="summary-value incorrect" id="incorrect-count">0</div>
                         <div class="summary-label">Incorrect</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value blank" id="blank-count">0</div>
+                        <div class="summary-label">Blank</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-value total" id="total-count">0</div>
@@ -505,22 +681,31 @@
         // DOM elements
         const bookSelect = document.getElementById('book-select');
         const testSelect = document.getElementById('test-select');
-        const fileInput = document.getElementById('file-input');
-        const scanButton = document.getElementById('scan-button');
-        const scanSection = document.getElementById('scan-section');
-        const loading = document.getElementById('loading');
+        const cameraFeed = document.getElementById('camera-feed');
+        const startCameraBtn = document.getElementById('start-camera');
+        const captureBtn = document.getElementById('capture-btn');
+        const stopCameraBtn = document.getElementById('stop-camera');
+        const previewSection = document.getElementById('preview-section');
+        const capturedImage = document.getElementById('captured-image');
+        const processBtn = document.getElementById('process-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const processingSection = document.getElementById('processing-section');
         const resultsSection = document.getElementById('results-section');
         const answerKey = document.getElementById('answer-key');
 
         // Current state
         let currentAnswers = null;
-        let studentAnswers = null;
+        let stream = null;
+        let capturedImageData = null;
 
         // Event listeners
         bookSelect.addEventListener('change', updateTestOptions);
         testSelect.addEventListener('change', updateAnswerKey);
-        fileInput.addEventListener('change', handleFileSelect);
-        scanButton.addEventListener('click', scanAndGrade);
+        startCameraBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', captureImage);
+        stopCameraBtn.addEventListener('click', stopCamera);
+        processBtn.addEventListener('click', processAnswerSheet);
+        retakeBtn.addEventListener('click', retakePhoto);
 
         function updateTestOptions() {
             const selectedBook = bookSelect.value;
@@ -551,11 +736,9 @@
             if (selectedBook && selectedTest && answerSheets[selectedBook] && answerSheets[selectedBook].tests[selectedTest]) {
                 currentAnswers = answerSheets[selectedBook].tests[selectedTest].answers;
                 displayAnswerKey();
-                checkScanButtonState();
             } else {
                 currentAnswers = null;
                 answerKey.style.display = 'none';
-                checkScanButtonState();
             }
         }
 
@@ -575,99 +758,215 @@
             answerKey.style.display = 'block';
         }
 
-        function handleFileSelect() {
-            checkScanButtonState();
-            if (fileInput.files.length > 0) {
-                scanSection.classList.add('active');
-            } else {
-                scanSection.classList.remove('active');
-            }
-        }
-
-        function checkScanButtonState() {
-            scanButton.disabled = !currentAnswers || !fileInput.files.length;
-        }
-
-        function scanAndGrade() {
-            if (!currentAnswers || !fileInput.files.length) return;
-            
-            // Show loading
-            loading.classList.add('show');
-            resultsSection.classList.remove('show');
-            
-            // Simulate scanning process
-            setTimeout(() => {
-                // Generate simulated student answers (with some random errors)
-                studentAnswers = currentAnswers.map(answer => {
-                    // 85% chance of correct answer
-                    if (Math.random() < 0.85) {
-                        return answer;
-                    } else {
-                        // Random incorrect answer
-                        const options = ['A', 'B', 'C', 'D'];
-                        const incorrectOptions = options.filter(opt => opt !== answer);
-                        return incorrectOptions[Math.floor(Math.random() * incorrectOptions.length)];
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment', // Use back camera if available
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     }
                 });
                 
-                displayResults();
-                loading.classList.remove('show');
-                resultsSection.classList.add('show');
-            }, 2000);
+                cameraFeed.srcObject = stream;
+                startCameraBtn.disabled = true;
+                captureBtn.disabled = false;
+                stopCameraBtn.disabled = false;
+                
+                // Hide other sections
+                previewSection.classList.remove('show');
+                processingSection.classList.remove('show');
+                resultsSection.classList.remove('show');
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showError('Unable to access camera. Please check permissions.');
+            }
+        }
+
+        function captureImage() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Set canvas size to match video
+            canvas.width = cameraFeed.videoWidth;
+            canvas.height = cameraFeed.videoHeight;
+            
+            // Draw current frame to canvas
+            context.drawImage(cameraFeed, 0, 0);
+            
+            // Convert to image data
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+            capturedImage.src = capturedImageData;
+            
+            // Show preview section
+            previewSection.classList.add('show');
+            
+            // Stop camera
+            stopCamera();
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            startCameraBtn.disabled = false;
+            captureBtn.disabled = true;
+            stopCameraBtn.disabled = true;
+            cameraFeed.srcObject = null;
+        }
+
+        function retakePhoto() {
+            previewSection.classList.remove('show');
+            processingSection.classList.remove('show');
+            resultsSection.classList.remove('show');
+            capturedImageData = null;
+        }
+
+        function processAnswerSheet() {
+            if (!currentAnswers || !capturedImageData) {
+                showError('Please select a test and capture an image first.');
+                return;
+            }
+            
+            // Show processing section
+            processingSection.classList.add('show');
+            previewSection.classList.remove('show');
+            
+            // Simulate processing steps
+            simulateProcessing();
+        }
+
+        function simulateProcessing() {
+            const steps = [
+                { id: 'step-1', message: 'Analyzing image quality and orientation...', duration: 1000 },
+                { id: 'step-2', message: 'Detecting bubble locations and boundaries...', duration: 1500 },
+                { id: 'step-3', message: 'Recognizing filled bubbles and answers...', duration: 2000 },
+                { id: 'step-4', message: 'Comparing with answer key and calculating score...', duration: 1000 }
+            ];
+            
+            let currentStep = 0;
+            
+            function processStep() {
+                if (currentStep < steps.length) {
+                    const step = steps[currentStep];
+                    
+                    // Update UI
+                    document.getElementById('processing-message').innerHTML = `<p>${step.message}</p>`;
+                    document.getElementById(step.id).classList.add('active');
+                    
+                    setTimeout(() => {
+                        document.getElementById(step.id).classList.remove('active');
+                        document.getElementById(step.id).classList.add('completed');
+                        currentStep++;
+                        processStep();
+                    }, step.duration);
+                } else {
+                    // Processing complete
+                    setTimeout(() => {
+                        processingSection.classList.remove('show');
+                        generateResults();
+                        displayResults();
+                    }, 500);
+                }
+            }
+            
+            processStep();
+        }
+
+        function generateResults() {
+            // Simulate optical mark recognition results
+            // In real implementation, this would use computer vision algorithms
+            const studentAnswers = currentAnswers.map((correctAnswer, index) => {
+                const random = Math.random();
+                
+                if (random < 0.75) {
+                    // 75% chance of correct answer
+                    return correctAnswer;
+                } else if (random < 0.95) {
+                    // 20% chance of incorrect answer
+                    const options = ['A', 'B', 'C', 'D'].filter(a => a !== correctAnswer);
+                    return options[Math.floor(Math.random() * options.length)];
+                } else {
+                    // 5% chance of blank answer
+                    return '';
+                }
+            });
+
+            return studentAnswers;
         }
 
         function displayResults() {
-            if (!currentAnswers || !studentAnswers) return;
-            
-            let correctCount = 0;
-            const totalCount = currentAnswers.length;
-            
-            // Calculate score
-            studentAnswers.forEach((answer, index) => {
-                if (answer === currentAnswers[index]) {
-                    correctCount++;
-                }
-            });
-            
-            const percentage = Math.round((correctCount / totalCount) * 100);
-            
-            // Update grade display
-            document.getElementById('grade-score').textContent = `${percentage}%`;
-            document.getElementById('grade-info').textContent = `${correctCount} out of ${totalCount} correct`;
-            
-            // Update summary
-            document.getElementById('correct-count').textContent = correctCount;
-            document.getElementById('incorrect-count').textContent = totalCount - correctCount;
-            document.getElementById('total-count').textContent = totalCount;
-            
-            // Update answers grid
+            const studentAnswers = generateResults();
             const answersGrid = document.getElementById('answers-grid');
             answersGrid.innerHTML = '';
+            
+            let correctCount = 0;
+            let incorrectCount = 0;
+            let blankCount = 0;
             
             studentAnswers.forEach((answer, index) => {
                 const answerItem = document.createElement('div');
                 answerItem.className = 'answer-item';
                 
-                const isCorrect = answer === currentAnswers[index];
-                answerItem.classList.add(isCorrect ? 'correct' : 'incorrect');
+                const answerNumber = document.createElement('div');
+                answerNumber.className = 'answer-number';
+                answerNumber.textContent = `Q${index + 1}`;
                 
-                answerItem.innerHTML = `
-                    <div>
-                        <strong>${index + 1}</strong><br>
-                        ${answer}
-                    </div>
-                `;
+                const answerChoice = document.createElement('div');
+                answerChoice.className = 'answer-choice';
+                answerChoice.textContent = answer || 'Blank';
                 
-                if (!isCorrect) {
-                    answerItem.title = `Correct answer: ${currentAnswers[index]}`;
+                answerItem.appendChild(answerNumber);
+                answerItem.appendChild(answerChoice);
+                
+                if (answer === '') {
+                    answerItem.classList.add('blank');
+                    blankCount++;
+                } else if (answer === currentAnswers[index]) {
+                    answerItem.classList.add('correct');
+                    correctCount++;
+                } else {
+                    answerItem.classList.add('incorrect');
+                    incorrectCount++;
                 }
                 
                 answersGrid.appendChild(answerItem);
             });
+            
+            // Update summary
+            const totalCount = currentAnswers.length;
+            const score = Math.round((correctCount / totalCount) * 100);
+            
+            document.getElementById('grade-score').textContent = `${score}%`;
+            document.getElementById('grade-info').textContent = 
+                `${correctCount} out of ${totalCount} correct`;
+                
+            document.getElementById('correct-count').textContent = correctCount;
+            document.getElementById('incorrect-count').textContent = incorrectCount;
+            document.getElementById('blank-count').textContent = blankCount;
+            document.getElementById('total-count').textContent = totalCount;
+            
+            // Show results section
+            resultsSection.classList.add('show');
         }
 
-        // Initialize
-        checkScanButtonState();
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            // Insert at the beginning of main content
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(errorDiv, mainContent.firstChild);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
     </script>
 </body>
 </html>
